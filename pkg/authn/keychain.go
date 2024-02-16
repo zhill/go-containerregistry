@@ -67,6 +67,20 @@ const (
 	DefaultAuthKey = "https://" + name.DefaultRegistry + "/v1/"
 )
 
+func loadCraneEnvironemntVars() (Authenticator, error) {
+	username := os.Getenv("CRANE_USERNAME")
+	password := os.Getenv("CRANE_PASSWORD")
+
+	if username != "" {
+		return FromConfig(AuthConfig{
+			Username: username,
+			Password: password,
+		}), nil
+	} else {
+		return Anonymous, nil
+	}
+}
+
 // Resolve calls ResolveContext with ctx if the given [Keychain] implements [ContextKeychain],
 // otherwise it calls Resolve with the given [Resource].
 func Resolve(ctx context.Context, keychain Keychain, target Resource) (Authenticator, error) {
@@ -137,7 +151,7 @@ func (dk *defaultKeychain) ResolveContext(_ context.Context, target Resource) (A
 	} else if path := filepath.Clean(podmanAuth); fileExists(path) {
 		f, err := os.Open(path)
 		if err != nil {
-			return nil, err
+			return loadCraneEnvironemntVars()
 		}
 		defer f.Close()
 		cf, err = config.LoadFromReader(f)
@@ -173,7 +187,7 @@ func (dk *defaultKeychain) ResolveContext(_ context.Context, target Resource) (A
 		}
 	}
 	if cfg == empty {
-		return Anonymous, nil
+		return loadCraneEnvironemntVars()
 	}
 
 	return FromConfig(AuthConfig{
