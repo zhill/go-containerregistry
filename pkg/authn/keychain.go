@@ -68,6 +68,20 @@ const (
 	DefaultAuthKey = "https://" + name.DefaultRegistry + "/v1/"
 )
 
+func loadCraneEnvironemntVars() (Authenticator, error) {
+	username := os.Getenv("CRANE_USERNAME")
+	password := os.Getenv("CRANE_PASSWORD")
+
+	if username != "" {
+		return FromConfig(AuthConfig{
+			Username: username,
+			Password: password,
+		}), nil
+	} else {
+		return Anonymous, nil
+	}
+}
+
 // Resolve calls ResolveContext with ctx if the given [Keychain] implements [ContextKeychain],
 // otherwise it calls Resolve with the given [Resource].
 func Resolve(ctx context.Context, keychain Keychain, target Resource) (Authenticator, error) {
@@ -130,7 +144,8 @@ func (dk *defaultKeychain) ResolveContext(_ context.Context, target Resource) (A
 	} else if fileExists(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers/auth.json")) {
 		f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers/auth.json"))
 		if err != nil {
-			return nil, err
+			return loadCraneEnvironemntVars()
+			//return Anonymous, nil
 		}
 		defer f.Close()
 		cf, err = config.LoadFromReader(f)
@@ -166,7 +181,8 @@ func (dk *defaultKeychain) ResolveContext(_ context.Context, target Resource) (A
 		}
 	}
 	if cfg == empty {
-		return Anonymous, nil
+		return loadCraneEnvironemntVars()
+		//return Anonymous, nil
 	}
 
 	return FromConfig(AuthConfig{
